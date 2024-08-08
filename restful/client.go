@@ -14,37 +14,77 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // RestClient Restful 客户端
 type RestClient struct {
-	client    http.Client // http 客户端
-	request   *Request    // 请求
-	responses []Response  // 响应栈
+	conf      *RestClientConfig // 客户端配置
+	client    http.Client       // http 客户端
+	request   *Request          // 请求
+	responses []*Response       // 响应栈
 }
 
 // RestClientConfig RestClient 配置
 type RestClientConfig struct {
-	retry *RetryConfig // 请求重试配置
+	EnableRetry    bool           // 启用重试
+	MaxRetry       int            // 最大重试次数
+	RetryDelay     time.Duration  // 重试间隔时间
+	RequestTimeout time.Duration  // 超时时间
+	Transport      http.Transport // transport 配置
 }
 
-// RetryConfig 请求重试配置
-type RetryConfig struct {
-	enable bool // 是否启用
-	max    int  // 最大重试次数
+// ParamsConfig 参数配置
+type ParamsConfig struct {
+	URL     string
+	Path    Path
+	Headers Data
+	Query   Data
+	Body    Body
 }
 
 // NewRestClient 新建 Restful 客户端
 func NewRestClient() *RestClient {
-	return &RestClient{
+	client := &RestClient{
+		conf: &RestClientConfig{
+			EnableRetry:    false,           // 默认不启用重试
+			MaxRetry:       0,               // 默认最大重试次数 0
+			RetryDelay:     0,               // 默认重试间隔时间 0
+			RequestTimeout: 2 * time.Minute, // 默认请求超时 2 min
+		},
 		request: &Request{
 			url:   "",
 			path:  make(Path, 0),
 			query: make(Data),
 			body:  struct{}{},
 		},
-		responses: make([]Response, 0),
+		responses: make([]*Response, 0),
 	}
+	// 初始化 headers map
+	client.request.req.Header = make(http.Header)
+	return client
+}
+
+// ApplyConfig 应用配置文件
+func (rc *RestClient) ApplyConfig(conf *RestClientConfig) *RestClient {
+	rc.conf = conf
+	return rc
+}
+
+// ApplyParams 应用参数
+func (rc *RestClient) ApplyParams(paramsConfig *ParamsConfig) *RestClient {
+	if paramsConfig != nil {
+		rc.request = &Request{
+			url:   paramsConfig.URL,
+			path:  paramsConfig.Path,
+			query: paramsConfig.Query,
+			body:  paramsConfig.Body,
+		}
+		if paramsConfig.Headers != nil {
+			rc.SetHeaders(paramsConfig.Headers)
+		}
+	}
+	return rc
 }
 
 // SetURL 设置 URL 路径参数
@@ -84,13 +124,19 @@ func (rc *RestClient) Reset() *RestClient {
 	rc.request.path = make([]interface{}, 0)
 	rc.request.query = make(Data)
 	rc.request.body = struct{}{}
-	rc.responses = make([]Response, 0)
+	rc.responses = make([]*Response, 0)
 	return rc
 }
 
 // DisableCertAuth 禁用 TLS 证书验证
 func (rc *RestClient) DisableCertAuth() *RestClient {
-	transport := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
+	transport := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, DisableKeepAlives: true}
+	rc.client.Transport = transport
+	return rc
+}
+
+// ApplyTransPort 应用 transport
+func (rc *RestClient) ApplyTransPort(transport *http.Transport) *RestClient {
 	rc.client.Transport = transport
 	return rc
 }
@@ -110,15 +156,7 @@ func (rc *RestClient) generateBody() error {
 		return err
 	}
 	if rc.request.body != nil {
-		var requestReader io.Reader
-		requestReader = bytes.NewReader(data)
-		body, ok := requestReader.(io.ReadCloser)
-		if !ok {
-			body = io.NopCloser(requestReader)
-		} else {
-			defer iotools.CloseReader(rc.request.req.Body)
-		}
-		rc.request.req.Body = body
+		rc.request.req.Body = io.NopCloser(bytes.NewReader(data))
 	}
 	return nil
 }
@@ -142,79 +180,122 @@ func (rc *RestClient) isJsonResponse(resp *http.Response) bool {
 	return contentType != nil && strings.Contains(contentType[0], "application/json")
 }
 
-// 执行请求
-func (rc *RestClient) executeRequest() *RestClient {
+// 处理请求
+func (rc *RestClient) handleRequest() *RestClient {
 	rc.setRequestURL(rc.generateURL())
 	err := rc.generateBody()
 	if err != nil {
 		rc.handleRequestError(err)
 		return rc
 	}
+	retry := rc.conf.MaxRetry
+	if !rc.conf.EnableRetry {
+		retry = 0
+	}
+	for len(rc.responses) <= retry {
+		response, err := rc.executeRequest()
+		if err != nil {
+			rc.handleRequestError(err)
+		} else {
+			rc.responses = append(rc.responses, response)
+			break
+		}
+		time.Sleep(rc.conf.RetryDelay)
+	}
+	return rc
+}
+
+// 执行一次请求
+func (rc *RestClient) executeRequest() (*Response, error) {
 	resp, err := rc.client.Do(&rc.request.req)
 	if err != nil {
-		rc.handleRequestError(err)
-		return rc
+		return nil, err
 	}
 	if resp == nil {
-		rc.handleRequestError(&customerror.NoContentResponse{})
-		return rc
+		return nil, &customerror.NoContentResponse{}
 	}
 	defer iotools.CloseReader(resp.Body)
-	return rc.handleHTTPResponse(resp, nil)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode >= 300 { // 非正常响应
+		return nil, &customerror.RequestFail{
+			Details: "raw response: " + string(body),
+		}
+	} else if !rc.isJsonResponse(resp) { // 非 json 响应
+		return nil, &customerror.NoRegularJsonResponse{
+			Details: "raw response: " + string(body),
+		}
+	}
+	// 正常响应
+	return &Response{
+		StatusCode: resp.StatusCode,
+		Proto:      resp.Proto,
+		Raw:        body,
+		Headers:    &resp.Header,
+		Request:    &rc.request.req,
+		TLS:        resp.TLS,
+	}, nil
 }
 
 // Get 发送 GET 请求
 func (rc *RestClient) Get() *RestClient {
 	rc.setRequestMethod(GET)
-	return rc.executeRequest()
+	return rc.handleRequest()
 }
 
 // Post 发送 POST 请求
 func (rc *RestClient) Post() *RestClient {
 	rc.setRequestMethod(POST)
-	return rc.executeRequest()
+	return rc.handleRequest()
 }
 
 // Put 发送 PUT 请求
 func (rc *RestClient) Put() *RestClient {
 	rc.setRequestMethod(PUT)
-	return rc.executeRequest()
+	return rc.handleRequest()
 }
 
 // Delete 发送 DELETE 请求
 func (rc *RestClient) Delete() *RestClient {
 	rc.setRequestMethod(DELETE)
-	return rc.executeRequest()
+	return rc.handleRequest()
 }
 
 // Stringify 获取响应数据字符串
 func (rc *RestClient) Stringify() (string, error) {
 	length := len(rc.responses)
 	lastResp := rc.responses[length-1]
-	if lastResp.err != nil {
-		return "", lastResp.err
+	if lastResp.Err != nil {
+		return "", lastResp.Err
 	}
-	if lastResp.statusCode >= 400 {
-		return string(lastResp.raw), &customerror.RequestFail{
-			Details: strconv.Itoa(lastResp.statusCode) + ": " + string(lastResp.raw),
+	if lastResp.StatusCode >= 300 {
+		return string(lastResp.Raw), &customerror.RequestFail{
+			Details: strconv.Itoa(lastResp.StatusCode) + ": " + string(lastResp.Raw),
 		}
 	}
-	return string(lastResp.raw), nil
+	return string(lastResp.Raw), nil
 }
 
 // Bind 获取响应数据绑定到结构
 func (rc *RestClient) Bind(v any) error {
 	length := len(rc.responses)
 	lastResp := rc.responses[length-1]
-	if lastResp.err != nil {
-		return lastResp.err
+	if lastResp.Err != nil {
+		return lastResp.Err
 	}
-	if lastResp.statusCode >= 400 {
+	if lastResp.StatusCode >= 300 {
 		return &customerror.RequestFail{
-			Details: strconv.Itoa(lastResp.statusCode) + ": " + string(lastResp.raw),
+			Details: strconv.Itoa(lastResp.StatusCode) + ": " + string(lastResp.Raw),
 		}
 	}
-	return json.Unmarshal(lastResp.raw, v)
+	return json.Unmarshal(lastResp.Raw, v)
+}
+
+// ResponseHeaders 获取响应请求 (以最后次请求为准)
+func (rc *RestClient) ResponseHeaders() *http.Header {
+	return rc.responses[len(rc.responses)-1].Headers
 }
 
 // TimesOfRetry 获取重试次数
@@ -223,39 +304,15 @@ func (rc *RestClient) TimesOfRetry() int {
 }
 
 // GetResponseStack 获取响应堆栈
-func (rc *RestClient) GetResponseStack() []Response {
+func (rc *RestClient) GetResponseStack() []*Response {
 	return rc.responses
 }
 
 // RestClient 请求错误处理
 func (rc *RestClient) handleRequestError(err error) {
-	rc.responses = append(rc.responses, Response{
-		err: err,
+	rc.responses = append(rc.responses, &Response{
+		Err: err,
 	})
-}
-
-// 处理 HTTP 响应
-func (rc *RestClient) handleHTTPResponse(resp *http.Response, err error) *RestClient {
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		rc.handleRequestError(err)
-		return rc
-	}
-	if !rc.isJsonResponse(resp) {
-		rc.handleRequestError(&customerror.NoRegularJsonResponse{
-			Details: "raw response: " + string(body),
-		})
-		return rc
-	}
-	rc.responses = append(rc.responses, Response{
-		statusCode: resp.StatusCode,
-		Proto:      resp.Proto,
-		raw:        body,
-		headers:    &resp.Header,
-		request:    &rc.request.req,
-		TLS:        resp.TLS,
-	})
-	return rc
 }
 
 // ============================ 参数构建处理 =============================== //

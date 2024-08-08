@@ -3,10 +3,8 @@ package restful
 import (
 	"crypto/tls"
 	"net/http"
+	"time"
 )
-
-// Headers Restful headers
-type Headers map[string]string
 
 // Path Restful path params
 type Path []any
@@ -38,11 +36,12 @@ type Request struct {
 
 // Response Restful 响应
 type Response struct {
-	statusCode int                  // 响应状态码
+	StatusCode int                  // 响应状态码
 	Proto      string               // 响应协议
-	raw        []byte               // 原始响应信息
-	headers    *http.Header         // 响应头
-	request    *http.Request        // 已发送请求
+	Raw        []byte               // 原始响应信息
+	Headers    *http.Header         // 响应头
+	Request    *http.Request        // 已发送请求
 	TLS        *tls.ConnectionState // tls 连接状态
-	err        error                // 执行错误
+	Err        error                // 执行错误
+	Time       time.Duration        // 响应用时
 }
