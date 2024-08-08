@@ -1,7 +1,7 @@
 package base
 
 import (
-	customerror "github.com/Anonymouscn/go-tools/error"
+	customerror "github.com/Anonymouscn/go-partner/error"
 	"reflect"
 	"strconv"
 	"strings"

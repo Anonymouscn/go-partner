@@ -3,7 +3,7 @@ package main
 import (
 	"crypto/tls"
 	"fmt"
-	"github.com/Anonymouscn/go-tools/restful"
+	"github.com/Anonymouscn/go-partner/restful"
 	"net/http"
 	"time"
 	"unsafe"

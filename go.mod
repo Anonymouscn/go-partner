@@ -1,3 +1,3 @@
-module github.com/Anonymouscn/go-tools
+module github.com/Anonymouscn/go-partner
 
 go 1.21
