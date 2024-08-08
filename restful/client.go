@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
-	"fmt"
 	"github.com/Anonymouscn/go-tools/base"
 	customerror "github.com/Anonymouscn/go-tools/error"
 	iotools "github.com/Anonymouscn/go-tools/io"
@@ -145,7 +144,6 @@ func (rc *RestClient) ApplyTransPort(transport *http.Transport) *RestClient {
 func (rc *RestClient) generateURL() string {
 	url := rc.buildPathParamsToURL(rc.request.url, rc.request.path)
 	url = rc.buildQueryParamsToURL(url, rc.request.query)
-	fmt.Println(url)
 	return url
 }
 
