@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unsafe"
 )
 
 // RestClient Restful 客户端
@@ -102,6 +103,14 @@ func (rc *RestClient) SetPath(path Path) *RestClient {
 func (rc *RestClient) SetHeaders(headers Data) *RestClient {
 	for k, v := range headers {
 		rc.request.req.Header.Set(k, rc.buildParams(v))
+	}
+	return rc
+}
+
+// AddHeaders 添加请求头
+func (rc *RestClient) AddHeaders(headers Data) *RestClient {
+	for k, v := range headers {
+		rc.request.req.Header.Add(k, rc.buildParams(v))
 	}
 	return rc
 }
@@ -201,6 +210,10 @@ func (rc *RestClient) handleRequest() *RestClient {
 	retry := rc.conf.MaxRetry
 	if !rc.conf.EnableRetry {
 		retry = 0
+	}
+	// 自动计算 Content-Length
+	if rc.request.body != nil {
+		rc.AddHeaders(Data{"Content-Length": strconv.Itoa(int(unsafe.Sizeof(rc.request.body)))})
 	}
 	for len(rc.responses) <= retry {
 		response, err := rc.executeRequest()
