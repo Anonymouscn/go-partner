@@ -118,6 +118,16 @@ func (rc *RestClient) SetBody(body Body) *RestClient {
 	return rc
 }
 
+// SetJsonString 直接装配 json 字符串请求体
+func (rc *RestClient) SetJsonString(json string) *RestClient {
+	rc.generateBody()
+	rc.request.body = nil
+	if json != "" {
+		rc.request.req.Body = io.NopCloser(bytes.NewReader([]byte(json)))
+	}
+	return rc
+}
+
 // Reset 参数重置
 func (rc *RestClient) Reset() *RestClient {
 	rc.request.path = make([]interface{}, 0)
@@ -149,12 +159,14 @@ func (rc *RestClient) generateURL() string {
 
 // 生成请求体
 func (rc *RestClient) generateBody() error {
-	data, err := json.Marshal(rc.request.body)
-	if err != nil {
-		return err
-	}
 	if rc.request.body != nil {
-		rc.request.req.Body = io.NopCloser(bytes.NewReader(data))
+		data, err := json.Marshal(rc.request.body)
+		if err != nil {
+			return err
+		}
+		if rc.request.body != nil {
+			rc.request.req.Body = io.NopCloser(bytes.NewReader(data))
+		}
 	}
 	return nil
 }

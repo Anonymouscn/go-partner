@@ -30,10 +30,10 @@ func main() {
 		//SetURL("https://bing.com").
 		//SetPath(restful.Path{"s"}).
 
-		//SetURL("https://192.168.2.23/redfish/v1/SessionService/Sessions").
+		SetURL("https://192.168.2.23/redfish/v1/SessionService/Sessions").
 
-		SetURL("https://192.168.2.23/redfish/v1/Chassis/1/Thermal#Fans").
-		SetHeaders(restful.Data{"X-Auth-Token": "a824cba6e8d57ddd1d694271259a250e"}).
+		//SetURL("https://192.168.2.23/redfish/v1/Chassis/1/Thermal#Fans").
+		//SetHeaders(restful.Data{"X-Auth-Token": "a824cba6e8d57ddd1d694271259a250e"}).
 
 		//SetURL("http://demo.ip-api.com/json/").
 		//SetPath(restful.Path{"219.133.188.223"}).
@@ -43,11 +43,11 @@ func main() {
 
 		//SetQuery(restful.Data{"fields": "66842623"}).
 
-		ApplyTransPort(&http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, DisableKeepAlives: true}).
-
-		//DisableCertAuth().
+		ApplyTransPort(&http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, DisableKeepAlives: false}).
+		DisableCertAuth().
 		//SetBody(data).
-		Get()
+		SetJsonString("{\"UserName\":\"root\", \"Password\":\"Pgl15218185426*\"}").
+		Post()
 	fmt.Println("http client size: ", unsafe.Sizeof(http.Client{}))
 	fmt.Println("take size: ", unsafe.Sizeof(*client))
 	fmt.Println("retry: ", client.TimesOfRetry())
