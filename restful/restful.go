@@ -12,9 +12,6 @@ type Path []any
 // Data Restful data
 type Data map[string]any
 
-// Body Restful body
-type Body any
-
 // Method Restful method
 type Method string
 
@@ -30,8 +27,9 @@ type Request struct {
 	req   http.Request // http 请求
 	url   string       // url 地址
 	path  Path         // 路径参数
+	data  Data         // 自动化处理数据
 	query Data         // 查询参数
-	body  Body         // 请求体数据
+	body  Data         // 请求体数据
 }
 
 // Response Restful 响应
