@@ -625,7 +625,7 @@ func (rc *RestClient) Stringify() (string, error) {
 	return string(resp.Raw), nil
 }
 
-// Bind 获取响应数据绑定到结构 (字段弱校验)
+// Bind 获取响应数据绑定到结构 (字段强校验)
 func (rc *RestClient) Bind(v any) error {
 	resp, err := rc.action()
 	if err != nil {
