@@ -16,7 +16,7 @@ import (
 //                                                                                  //
 //  struct util 测试                                                                //
 //  @author anonymous                                                               //
-//  @updated_at 2024.11.10 23:30:19                                                 //
+//  @updated_at 2024.11.16 20:45:19                                                 //
 //                                                                                  //
 //  @cmd_help:                                                                      //
 //  1. unit test:                                                                   //
@@ -214,7 +214,7 @@ type Resp3Anon3 struct {
 }
 
 // testStructToMapExampleList 结构体转 map 测试用例表
-var testStructToMapExampleList = []func() string{
+var testStructToMapExampleList = []base.TestFn{
 	func() string {
 		t := time.Now()
 		resp := &JsonResp[RespData1]{

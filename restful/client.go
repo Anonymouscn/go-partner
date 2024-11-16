@@ -40,12 +40,14 @@ type RestClientConfig struct {
 
 // ParamsConfig 参数配置
 type ParamsConfig struct {
-	URL    string // 请求 url
-	Path   Path   // 请求路径
-	Header Data   // 请求头数据
-	Query  any    // 请求行数据
-	Body   any    // 请求体数据
-	Data   any    // 自动化处理数据
+	URL    string        // 请求 url
+	Path   Path          // 请求路径
+	Header Data          // 请求头数据
+	Query  any           // 请求行数据
+	Body   any           // 请求体数据
+	Data   any           // 自动化处理数据
+	Raw    []byte        // 原生请求体数据 (不需要 json 转换处理)
+	Form   urlpkg.Values // 表单数据
 }
 
 // NewRestClient 新建 Restful 客户端
@@ -85,6 +87,8 @@ func (rc *RestClient) ApplyParams(paramsConfig *ParamsConfig) *RestClient {
 			query: make(map[string]any),
 			body:  make(map[string]any),
 			data:  make(map[string]any),
+			raw:   paramsConfig.Raw,
+			form:  paramsConfig.Form,
 		}
 		// 请求头处理
 		if paramsConfig.Header != nil {
@@ -110,6 +114,11 @@ func (rc *RestClient) SetPath(path Path) *RestClient {
 func (rc *RestClient) ResetPath() *RestClient {
 	rc.request.path = make(Path, 0)
 	return rc
+}
+
+// SetHeaders 设置请求头 (等同于 ApplyHeaders, 兼容旧版本)
+func (rc *RestClient) SetHeaders(headers Data) *RestClient {
+	return rc.ApplyHeaders(headers)
 }
 
 // ApplyHeaders 应用请求头
@@ -207,7 +216,7 @@ func (rc *RestClient) generateCookie(cm map[string]string) string {
 // ==================================== 参数直接装配方法定义 ==================================== //
 
 // paramsToMap 参数转 map
-func paramsToMap(params any) (map[string]any, error) {
+func (*RestClient) paramsToMap(params any) (map[string]any, error) {
 	pm, err := base.AnyToMap(params)
 	if err != nil {
 		fmt.Printf("convert params[%v] fail: %v\n", params, err)
@@ -217,7 +226,7 @@ func paramsToMap(params any) (map[string]any, error) {
 }
 
 // applyParams 应用参数
-func applyParams(params []any) map[string]any {
+func (rc *RestClient) applyParams(params []any) map[string]any {
 	l := len(params)
 	m := map[string]any{}
 	if l == 0 {
@@ -225,13 +234,13 @@ func applyParams(params []any) map[string]any {
 	} else if l > 1 {
 		tm := make(map[string]any)
 		for _, p := range params {
-			if pm, err := paramsToMap(p); err == nil {
+			if pm, err := rc.paramsToMap(p); err == nil {
 				base.MapCopyOnNotExist(tm, pm)
 			}
 		}
 		return tm
 	} else {
-		if pm, err := paramsToMap(params[0]); err == nil {
+		if pm, err := rc.paramsToMap(params[0]); err == nil {
 			return pm
 		}
 	}
@@ -239,8 +248,8 @@ func applyParams(params []any) map[string]any {
 }
 
 // addParams 添加参数
-func addParams(m map[string]any, params any, overwrite bool) {
-	if pm, err := paramsToMap(params); err == nil {
+func (rc *RestClient) addParams(m map[string]any, params any, overwrite bool) {
+	if pm, err := rc.paramsToMap(params); err == nil {
 		if overwrite {
 			maps.Copy(m, pm)
 		} else {
@@ -249,15 +258,64 @@ func addParams(m map[string]any, params any, overwrite bool) {
 	}
 }
 
+// applyFormParams 应用表单参数
+func (rc *RestClient) applyFormParams(params []any) (map[string][]string, error) {
+	form := make(map[string][]string)
+	for _, item := range params {
+		m, err := rc.paramsToMap(item)
+		if err != nil {
+			return nil, err
+		}
+		for k, v := range m {
+			if err := rc.setFormParams(form, k, v); err != nil {
+				return nil, err
+			}
+		}
+	}
+	return form, nil
+}
+
+// addFormParams 添加表单参数
+func (rc *RestClient) addFormParams(m map[string][]string, params any, overwrite bool) error {
+	if pm, err := rc.paramsToMap(params); err == nil {
+		if overwrite {
+			for k, v := range pm {
+				if err := rc.setFormParams(m, k, v); err != nil {
+					return err
+				}
+			}
+		} else {
+			for k, v := range pm {
+				if m[k] == nil {
+					if err := rc.setFormParams(m, k, v); err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// setFormParams 设置表单参数
+func (*RestClient) setFormParams(m map[string][]string, key string, params any) error {
+	p, err := base.AnyToString(params)
+	if err != nil {
+		return err
+	}
+	m[key] = []string{p}
+	return nil
+}
+
 // SetData 设置自动化参数 (GET/DELETE: SetQuery, POST/PUT: SetBody)
 func (rc *RestClient) SetData(params ...any) *RestClient {
-	rc.request.data = applyParams(params)
+	rc.request.data = rc.applyParams(params)
 	return rc
 }
 
 // AddData 添加自动化参数 (GET/DELETE: SetQuery, POST/PUT: SetBody)
 func (rc *RestClient) AddData(params any) *RestClient {
-	addParams(rc.request.data, params, true)
+	rc.addParams(rc.request.data, params, true)
 	return rc
 }
 
@@ -269,13 +327,13 @@ func (rc *RestClient) ResetData() *RestClient {
 
 // SetQuery 设置请求行参数
 func (rc *RestClient) SetQuery(params ...any) *RestClient {
-	rc.request.query = applyParams(params)
+	rc.request.query = rc.applyParams(params)
 	return rc
 }
 
 // AddQuery 添加请求行参数
 func (rc *RestClient) AddQuery(params any) *RestClient {
-	addParams(rc.request.query, params, true)
+	rc.addParams(rc.request.query, params, true)
 	return rc
 }
 
@@ -287,13 +345,13 @@ func (rc *RestClient) ResetQuery() *RestClient {
 
 // SetBody 设置请求体参数
 func (rc *RestClient) SetBody(params ...any) *RestClient {
-	rc.request.body = applyParams(params)
+	rc.request.body = rc.applyParams(params)
 	return rc
 }
 
 // AddBody 添加请求体参数
 func (rc *RestClient) AddBody(params any) *RestClient {
-	addParams(rc.request.body, params, true)
+	rc.addParams(rc.request.body, params, true)
 	return rc
 }
 
@@ -303,14 +361,46 @@ func (rc *RestClient) ResetBody() *RestClient {
 	return rc
 }
 
-// SetJsonString 直接装配 json 字符串请求体
-func (rc *RestClient) SetJsonString(json string) *RestClient {
-	_ = rc.generateBody()
-	rc.request.body = nil
-	if json != "" {
-		rc.request.req.Body = io.NopCloser(bytes.NewReader([]byte(json)))
-	}
+// SetBodyRaw 设置原生请求体参数 (参数直接装配, 无需 json 化)
+func (rc *RestClient) SetBodyRaw(raw []byte) *RestClient {
+	rc.request.raw = raw
 	return rc
+}
+
+// SetBodyRawString 设置原生请求体参数 (参数直接装配, 无需 json 化)
+func (rc *RestClient) SetBodyRawString(raw string) *RestClient {
+	rc.request.raw = []byte(raw)
+	return rc
+}
+
+// ResetBodyRaw 重置原生请求体参数
+func (rc *RestClient) ResetBodyRaw() *RestClient {
+	rc.request.raw = nil
+	return rc
+}
+
+// SetForm 设置表单参数
+func (rc *RestClient) SetForm(params ...any) *RestClient {
+	rc.request.form, _ = rc.applyFormParams(params)
+	return rc
+}
+
+// AddForm 添加表单参数
+func (rc *RestClient) AddForm(params any) *RestClient {
+	_ = rc.addFormParams(rc.request.form, params, true)
+	return rc
+}
+
+// ResetForm 重置表单参数
+func (rc *RestClient) ResetForm() *RestClient {
+	rc.request.form = nil
+	return rc
+}
+
+// SetJsonString 直接装配 json 字符串请求体 (待废除方法, 与新方法 SetBodyRaw, SetBodyRawString 作用一致)
+// Deprecated: SetJsonString 方法将于 2024.12.01 废除, 请使用新方法: SetBodyRawString
+func (rc *RestClient) SetJsonString(json string) *RestClient {
+	return rc.SetBodyRawString(json)
 }
 
 // ClearResponses 清除所有响应信息
@@ -325,7 +415,9 @@ func (rc *RestClient) Reset() *RestClient {
 		ResetPath().
 		ResetQuery().
 		ResetBody().
+		ResetBodyRaw().
 		ResetData().
+		ResetForm().
 		ClearResponses()
 }
 
@@ -353,7 +445,9 @@ func (rc *RestClient) generateURL() string {
 
 // 生成请求体
 func (rc *RestClient) generateBody() error {
-	if rc.request.body != nil {
+	if !rc.isEmptyRaw() {
+		rc.request.req.Body = io.NopCloser(bytes.NewReader(rc.request.raw))
+	} else if rc.request.body != nil {
 		data, err := sonic.Marshal(rc.request.body)
 		if err != nil {
 			return err
@@ -363,6 +457,11 @@ func (rc *RestClient) generateBody() error {
 		}
 	}
 	return nil
+}
+
+func (rc *RestClient) isEmptyRaw() bool {
+	r := rc.request.raw
+	return r == nil || len(r) <= 0
 }
 
 // 设置请求方法
@@ -420,7 +519,15 @@ func (rc *RestClient) handleRequest() *RestClient {
 
 // 执行一次请求
 func (rc *RestClient) executeRequest() (*Response, error) {
-	resp, err := rc.client.Do(&rc.request.req)
+	var (
+		resp *http.Response
+		err  error
+	)
+	if rc.request.form != nil {
+		resp, err = rc.client.PostForm(rc.request.url, rc.request.form)
+	} else {
+		resp, err = rc.client.Do(&rc.request.req)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -755,15 +862,3 @@ func (rc *RestClient) ConvertData(data any) (map[string]any, error) {
 	}
 	return nil, errors.New(fmt.Sprintf("params %v convert error !", sign))
 }
-
-// ======================= todo 测试 api
-
-func (rc *RestClient) BuildPathParamsToURL(url string, params []any) string {
-	return rc.buildPathParamsToURL(url, params)
-}
-
-func (rc *RestClient) BuildQueryParamsToURL(url string, params Data) string {
-	return rc.buildQueryParamsToURL(url, params)
-}
-
-// =======================

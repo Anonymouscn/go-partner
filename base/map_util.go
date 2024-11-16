@@ -14,7 +14,7 @@ func MapCopyOnNotExist[M1 ~map[K]V, M2 ~map[K]V, K comparable, V any](dst M1, sr
 	}
 }
 
-// StandardMap 转换标注 map (map[string]any)
+// StandardMap 转换标准 map (map[string]any)
 func StandardMap(m any) (map[string]any, error) {
 	v := reflect.ValueOf(m)
 	k := v.Kind()

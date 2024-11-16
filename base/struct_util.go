@@ -264,11 +264,7 @@ func setSliceOrArray(fv, tv reflect.Value) error {
 			src := reflect.ValueOf(tv.Index(i).Interface())
 			dst := fv.Index(i)
 			// 处理数组单元
-			if dst.Kind() != reflect.Pointer || !checkAndInstantiatePointerField(dst.Type(), dst, src) {
-				if src.Kind() == dst.Kind() {
-					dst.Set(src)
-				}
-			}
+			setStructField(dst, src)
 		}
 	}
 	return nil

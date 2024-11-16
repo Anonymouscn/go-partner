@@ -1,10 +1,15 @@
 package test
 
+import (
+	"fmt"
+	"testing"
+)
+
 // ================================================================================ //
 //                                                                                  //
-//  type util 测试                                                                   //
+//  测试模版示例                                                                      //
 //  @author anonymous                                                               //
-//  @updated_at 2024.11.15 01:28:49                                                 //
+//  @updated_at 2024.11.16 20:46:08                                                 //
 //                                                                                  //
 //  @cmd_help:                                                                      //
 //  1. unit test:                                                                   //
@@ -14,3 +19,8 @@ package test
 //                                                                                  //
 //                                                                                  //
 // ================================================================================ //
+
+// TestExample 单元测试样例
+func TestExample(t *testing.T) {
+	fmt.Println("This is a test example")
+}
