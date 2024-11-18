@@ -354,6 +354,25 @@ func GetJsonTagFromStructField(field reflect.StructField) []string {
 	return strings.Split(GetTagFromStructField(field, "json"), ",")
 }
 
+// GetFormTagFromStructField 从结构体获取 form 标签
+func GetFormTagFromStructField(field reflect.StructField) []string {
+	return strings.Split(GetTagFromStructField(field, "form"), ",")
+}
+
+// GetFormKeyFromStructField 从结构体字段获取 form key
+func GetFormKeyFromStructField(field reflect.StructField) string {
+	tag := GetFormTagFromStructField(field)
+	if len(tag) == 0 {
+		return ""
+	}
+	return tag[0]
+}
+
+// GetGormTagFromStructField 从结构体获取 gorm 标签
+func GetGormTagFromStructField(field reflect.StructField) []string {
+	return strings.Split(GetTagFromStructField(field, "gorm"), ",")
+}
+
 // GetJsonKeyFromStructField 从结构体字段获取 json key
 func GetJsonKeyFromStructField(field reflect.StructField) string {
 	tag := GetJsonTagFromStructField(field)
