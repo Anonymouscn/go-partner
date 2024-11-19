@@ -9,6 +9,7 @@ import (
 // res: 上一步执行结果, fn: 本次执行函数, args: 本次执行函数入参
 //type Action func(fn any, args ...any)
 
+// Action 执行操作
 type Action struct {
 	Fn   any   // 本次执行函数
 	Args []any // 本次执行函数入参

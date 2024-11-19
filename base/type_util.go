@@ -3,7 +3,6 @@ package base
 import (
 	"fmt"
 	customerror "github.com/Anonymouscn/go-partner/error"
-	"maps"
 	"reflect"
 	"strconv"
 	"strings"
@@ -104,7 +103,7 @@ func MergeAnyToMap(dst map[string]any, src any, overwrite bool) error {
 		return err
 	}
 	if overwrite {
-		maps.Copy(dst, m)
+		MapCopy(dst, m)
 	} else {
 		MapCopyOnNotExist(dst, m)
 	}
