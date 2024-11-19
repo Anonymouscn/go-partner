@@ -11,7 +11,6 @@ import (
 	"github.com/Anonymouscn/go-partner/net"
 	"github.com/bytedance/sonic"
 	"io"
-	"maps"
 	"net/http"
 	urlpkg "net/url"
 	"reflect"
@@ -251,7 +250,7 @@ func (rc *RestClient) applyParams(params []any) map[string]any {
 func (rc *RestClient) addParams(m map[string]any, params any, overwrite bool) {
 	if pm, err := rc.paramsToMap(params); err == nil {
 		if overwrite {
-			maps.Copy(m, pm)
+			base.MapCopy(m, pm)
 		} else {
 			base.MapCopyOnNotExist(m, pm)
 		}
