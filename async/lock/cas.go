@@ -1,6 +1,7 @@
 package lock
 
 import (
+	"runtime"
 	"sync/atomic"
 )
 
@@ -10,7 +11,13 @@ type CASSignal struct {
 }
 
 // Add 增加信号量
-func (s *CASSignal) Add() {
+func (s *CASSignal) Add(x int64) {
+	for !atomic.CompareAndSwapInt64(&s.state, s.state, s.state+x) {
+	}
+}
+
+// Increase 自增信号量
+func (s *CASSignal) Increase() {
 	for !atomic.CompareAndSwapInt64(&s.state, s.state, s.state+1) {
 	}
 }
@@ -24,6 +31,12 @@ func (s *CASSignal) Done() {
 // Status 读取信号量状态
 func (s *CASSignal) Status() int64 {
 	return atomic.LoadInt64(&s.state)
+}
+
+func (s *CASSignal) Wait() {
+	for s.Status() > 0 {
+		runtime.Gosched()
+	}
 }
 
 // CASSwitch CAS 原子开关

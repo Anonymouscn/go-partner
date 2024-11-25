@@ -23,20 +23,13 @@ import (
 
 func TestDataFlow(t *testing.T) {
 	f := flow.NewDataFlow[int](20)
+	m := make(map[int]int)
 	// 注入消费者 1
-	f.Consume(func(dc <-chan int, ec <-chan error, args ...any) {
-		// 读取信息
-		go func() {
-			for v := range dc {
-				fmt.Println("receive message: ", v)
-			}
-		}()
-		// 读取错误
-		go func() {
-			for e := range ec {
-				fmt.Println("receive error: ", e)
-			}
-		}()
+	f.Consume(func(dc <-chan int, ec chan<- error, args ...any) {
+		for v := range dc {
+			fmt.Println("receive message: ", v)
+			m[v] = v
+		}
 	})
 	// 注入生产者 1
 	f.Produce(func(dc chan<- int, ec chan<- error, args ...any) {
@@ -59,25 +52,19 @@ func TestDataFlow(t *testing.T) {
 	// 外部终止数据流
 	f.Stop()
 	fmt.Println("success !")
+	fmt.Println(m)
 }
 
 func BenchmarkTestDataFlow(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		f := flow.NewDataFlow[int](20)
+		m := make(map[int]int)
 		// 注入消费者 1
-		f.Consume(func(dc <-chan int, ec <-chan error, args ...any) {
-			// 读取信息
-			go func() {
-				for v := range dc {
-					fmt.Println("receive message: ", v)
-				}
-			}()
-			// 读取错误
-			go func() {
-				for e := range ec {
-					fmt.Println("receive error: ", e)
-				}
-			}()
+		f.Consume(func(dc <-chan int, ec chan<- error, args ...any) {
+			for v := range dc {
+				fmt.Println("receive message: ", v)
+				m[v] = v
+			}
 		})
 		// 注入生产者 1
 		f.Produce(func(dc chan<- int, ec chan<- error, args ...any) {
@@ -100,5 +87,6 @@ func BenchmarkTestDataFlow(b *testing.B) {
 		// 外部终止数据流
 		f.Stop()
 		fmt.Println("success !")
+		fmt.Println(m)
 	}
 }

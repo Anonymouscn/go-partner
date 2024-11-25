@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 )
 
-// todo 新增数据分发器 - 实现多个消费方分发
+// todo 需要新增数据分发器 - 实现多个消费方分发
 
 // DataDispatcher 数据分发器
 type DataDispatcher[T any] struct {
@@ -109,8 +109,8 @@ func (f *DataFlow[T]) Status() int64 {
 // Start 开启数据流
 func (f *DataFlow[T]) Start() *DataFlow[T] {
 	if atomic.LoadInt64(&f.State) == 0 {
-		// 启用管道状态, 允许注册生产方
-		for !atomic.CompareAndSwapInt64(&f.State, 0, 1) {
+		// 启用管道, 允许注册生产方
+		for !atomic.CompareAndSwapInt64(&f.State, 0, 2) {
 		}
 	}
 	return f
@@ -118,14 +118,18 @@ func (f *DataFlow[T]) Start() *DataFlow[T] {
 
 // Stop 关闭数据流
 func (f *DataFlow[T]) Stop() *DataFlow[T] {
-	defer close(f.DataChannel)
-	defer close(f.ErrChannel)
-	// 关闭管道状态, 禁止注册生产方
-	for !atomic.CompareAndSwapInt64(&f.State, 1, 0) {
+	// 关闭管道, 禁止注册生产方
+	for !atomic.CompareAndSwapInt64(&f.State, 2, 1) {
 	}
-	// 自旋等待生产方结束
+	// 等待生产方结束生产
 	for atomic.LoadInt64(&f.Counter) > 0 {
-		// 让出 cpu 时间片
+		runtime.Gosched()
+	}
+	// 关闭数据和错误处理队列
+	close(f.DataChannel)
+	close(f.ErrChannel)
+	// 等待消费方停止消费
+	for atomic.LoadInt64(&f.State) > 0 {
 		runtime.Gosched()
 	}
 	return f
@@ -136,25 +140,48 @@ type ProduceFn[T any] func(dc chan<- T, ec chan<- error, args ...any)
 
 // Produce 注入生产方
 func (f *DataFlow[T]) Produce(fn ProduceFn[T], args ...any) *DataFlow[T] {
-	// 注册生产者
+	// 注册生产方
 	for atomic.LoadInt64(&f.State) > 0 && !atomic.CompareAndSwapInt64(&f.Counter, f.Counter, f.Counter+1) {
 	}
+	// 数据流已关闭, 注册失败
 	if atomic.LoadInt64(&f.State) == 0 {
 		return f
 	}
-	defer func() {
-		for !atomic.CompareAndSwapInt64(&f.Counter, f.Counter, f.Counter-1) {
-		}
+	// 异步生产
+	go func() {
+		defer func() {
+			for !atomic.CompareAndSwapInt64(&f.Counter, f.Counter, f.Counter-1) {
+			}
+		}()
+		fn(f.DataChannel, f.ErrChannel, args)
 	}()
-	fn(f.DataChannel, f.ErrChannel, args)
 	return f
 }
 
 // ConsumeFn 消费方法
-type ConsumeFn[T any] func(dc <-chan T, ec <-chan error, args ...any)
+type ConsumeFn[T any] func(dc <-chan T, ec chan<- error, args ...any)
 
 // Consume 注入消费方
 func (f *DataFlow[T]) Consume(fn ConsumeFn[T], args ...any) *DataFlow[T] {
-	fn(f.DataChannel, f.ErrChannel, args)
+	// 异步消费
+	go func() {
+		fn(f.DataChannel, f.ErrChannel, args)
+		defer func() {
+			for !atomic.CompareAndSwapInt64(&f.State, 1, 0) {
+			}
+		}()
+	}()
+	return f
+}
+
+// ErrorHandleFn 错误处理方法
+type ErrorHandleFn[T any] func(ec <-chan error, args ...any)
+
+// OnError 错误处理
+func (f *DataFlow[T]) OnError(fn ErrorHandleFn[T], args ...any) *DataFlow[T] {
+	// 异步错误处理
+	go func() {
+		fn(f.ErrChannel, args)
+	}()
 	return f
 }
