@@ -574,7 +574,7 @@ func (rc *RestClient) handleData() *RestClient {
 // Do 发起指定类型请求
 func (rc *RestClient) Do(method Method) *RestClient {
 	rc.setRequestMethod(method)
-	return rc
+	return rc.handleRequest()
 }
 
 // Get 发送 GET 请求
@@ -592,6 +592,12 @@ func (rc *RestClient) Post() *RestClient {
 // Put 发送 PUT 请求
 func (rc *RestClient) Put() *RestClient {
 	rc.setRequestMethod(PUT)
+	return rc.handleRequest()
+}
+
+// Patch 发送 PATCH 请求
+func (rc *RestClient) Patch() *RestClient {
+	rc.setRequestMethod(PATCH)
 	return rc.handleRequest()
 }
 
