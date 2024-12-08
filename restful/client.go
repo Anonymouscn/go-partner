@@ -574,7 +574,7 @@ func (rc *RestClient) handleData() *RestClient {
 // Do 发起指定类型请求
 func (rc *RestClient) Do(method Method) *RestClient {
 	rc.setRequestMethod(method)
-	return rc
+	return rc.handleRequest()
 }
 
 // Get 发送 GET 请求
