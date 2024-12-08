@@ -595,6 +595,12 @@ func (rc *RestClient) Put() *RestClient {
 	return rc.handleRequest()
 }
 
+// Patch 发送 PATCH 请求
+func (rc *RestClient) Patch() *RestClient {
+	rc.setRequestMethod(PATCH)
+	return rc.handleRequest()
+}
+
 // Delete 发送 DELETE 请求
 func (rc *RestClient) Delete() *RestClient {
 	rc.setRequestMethod(DELETE)
