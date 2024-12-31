@@ -359,7 +359,7 @@ func GetFormTagFromStructField(field reflect.StructField) []string {
 	return strings.Split(GetTagFromStructField(field, "form"), ",")
 }
 
-// GetFormKeyFromStructField 从结构体字段获取 form key
+// GetFormKeyFromStructField 从结构体字段获取 form key [适配 GORM]
 func GetFormKeyFromStructField(field reflect.StructField) string {
 	tag := GetFormTagFromStructField(field)
 	if len(tag) == 0 {
@@ -368,7 +368,7 @@ func GetFormKeyFromStructField(field reflect.StructField) string {
 	return tag[0]
 }
 
-// GetGormTagFromStructField 从结构体获取 gorm 标签
+// GetGormTagFromStructField 从结构体获取 gorm 标签 [适配 GORM]
 func GetGormTagFromStructField(field reflect.StructField) []string {
 	return strings.Split(GetTagFromStructField(field, "gorm"), ",")
 }
