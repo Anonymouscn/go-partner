@@ -279,3 +279,16 @@ func BenchmarkRestClientDoRequest(b *testing.B) {
 		}
 	}
 }
+
+func TestGetRequest(t *testing.T) {
+	client := restful.NewRestClient().SetBodyRaw(nil).
+		SetURL("https://api.openai.com/v1/models").
+		SetHeaders(restful.Data{"Authorization": "Bearer " + "$key"}).
+		Get()
+	resp, err := client.Stringify()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(resp)
+}

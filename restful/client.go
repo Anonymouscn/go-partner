@@ -446,7 +446,7 @@ func (rc *RestClient) generateURL() string {
 func (rc *RestClient) generateBody() error {
 	if !rc.isEmptyRaw() {
 		rc.request.req.Body = io.NopCloser(bytes.NewReader(rc.request.raw))
-	} else if rc.request.body != nil {
+	} else if rc.request.body != nil && len(rc.request.body) > 0 {
 		data, err := sonic.Marshal(rc.request.body)
 		if err != nil {
 			return err
@@ -454,6 +454,8 @@ func (rc *RestClient) generateBody() error {
 		if rc.request.body != nil {
 			rc.request.req.Body = io.NopCloser(bytes.NewReader(data))
 		}
+	} else {
+		rc.request.req.Body = nil
 	}
 	return nil
 }
