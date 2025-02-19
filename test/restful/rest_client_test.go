@@ -292,3 +292,35 @@ func TestGetRequest(t *testing.T) {
 	}
 	fmt.Println(resp)
 }
+
+func TestGetSSEStream(t *testing.T) {
+	client := restful.NewRestClient().
+		SetURL("https://api.deepseek.com/chat/completions").
+		SetHeaders(
+			restful.Data{
+				"Authorization": "Bearer " + "$Bearer",
+				"Content-Type":  "application/json",
+				"Accept":        "application/json",
+			},
+		).SetBody(
+		restful.Data{
+			"model": "deepseek-chat",
+			"messages": []restful.Data{
+				{
+					"role":    "system",
+					"content": "你是智探科技研发的AI助手，请你解答用户提出的问题",
+				},
+				{
+					"role":    "user",
+					"content": "你是谁",
+				},
+			},
+			"stream": true,
+		},
+	).Post()
+	if err := client.Stream(func(chunk string, params ...any) {
+		fmt.Println("receive: ", chunk)
+	}); err != nil {
+		fmt.Println(err)
+	}
+}

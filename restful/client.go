@@ -1,6 +1,7 @@
 package restful
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/tls"
 	"errors"
@@ -516,6 +517,53 @@ func (rc *RestClient) handleRequest() *RestClient {
 		time.Sleep(rc.conf.RetryDelay)
 	}
 	return rc
+}
+
+// HandleEventStreamFn 事件流处理函数
+type HandleEventStreamFn func(chunk string, params ...any)
+
+// Stream 获取流式输出
+func (rc *RestClient) Stream(handleFn HandleEventStreamFn, params ...any) error {
+	return rc.getEventStream(handleFn, params)
+}
+
+// 获取事件流
+// timeout: 超时时间
+// TODO: 1.暂不支持重试
+func (rc *RestClient) getEventStream(handleFn HandleEventStreamFn, params ...any) error {
+	// 处理自动参数
+	rc.handleData()
+	// 生成请求行
+	rc.setRequestURL(rc.generateURL())
+	// 生成请求体
+	err := rc.generateBody()
+	if err != nil {
+		return err
+	}
+	// 自动计算 Content-Length
+	if rc.request.body != nil {
+		rc.AddHeaders(Data{"Content-Length": strconv.Itoa(int(unsafe.Sizeof(rc.request.body)))})
+	}
+	// 建立长连接
+	rc.AddHeaders(Data{
+		"Cache-Control": "no-cache",
+		"Connection":    "keep-alive",
+	})
+	// 尝试获取响应流
+	response, err := rc.client.Do(&rc.request.req)
+	if err != nil {
+		return fmt.Errorf("Error on request - " + err.Error())
+	}
+	defer iotools.CloseReader(response.Body)
+	// 读取响应流
+	scanner := bufio.NewScanner(response.Body)
+	for scanner.Scan() {
+		if err := scanner.Err(); err != nil {
+			return fmt.Errorf("Error on read data - " + err.Error())
+		}
+		handleFn(scanner.Text(), params)
+	}
+	return nil
 }
 
 // 执行一次请求
