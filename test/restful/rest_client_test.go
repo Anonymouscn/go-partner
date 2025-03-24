@@ -298,13 +298,13 @@ func TestGetSSEStream(t *testing.T) {
 		SetURL("https://api.deepseek.com/chat/completions").
 		SetHeaders(
 			restful.Data{
-				"Authorization": "Bearer " + "$Bearer",
+				"Authorization": "Bearer " + "sk-285f8b26d1a745eea335b0937bfc0436",
 				"Content-Type":  "application/json",
 				"Accept":        "application/json",
 			},
 		).SetBody(
 		restful.Data{
-			"model": "deepseek-chat",
+			"model": "deepseek-reasoner",
 			"messages": []restful.Data{
 				{
 					"role":    "system",
@@ -317,7 +317,7 @@ func TestGetSSEStream(t *testing.T) {
 			},
 			"stream": true,
 		},
-	).Post()
+	).SetTimeout(30 * time.Minute).Post()
 	if err := client.Stream(func(chunk string, params ...any) {
 		fmt.Println("receive: ", chunk)
 	}); err != nil {

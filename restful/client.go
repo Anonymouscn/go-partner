@@ -12,6 +12,7 @@ import (
 	"github.com/Anonymouscn/go-partner/net"
 	"github.com/bytedance/sonic"
 	"io"
+	net2 "net"
 	"net/http"
 	urlpkg "net/url"
 	"reflect"
@@ -70,6 +71,23 @@ func NewRestClient() *RestClient {
 	// 初始化 headers map
 	client.request.req.Header = make(http.Header)
 	return client
+}
+
+// SetTimeout 设置请求超时时间
+func (rc *RestClient) SetTimeout(ttl time.Duration) *RestClient {
+	//ctx, _ := context.WithTimeout(context.Background(), ttl)
+	//rc.request.req.WithContext(ctx)
+	rc.client.Timeout = 0
+	rc.client.Transport = &http.Transport{
+		MaxIdleConns:          1000,
+		ResponseHeaderTimeout: 0,
+		IdleConnTimeout:       0,
+		DisableKeepAlives:     false,
+		DialContext: (&net2.Dialer{
+			KeepAlive: 2 * time.Second,
+		}).DialContext,
+	}
+	return rc
 }
 
 // ApplyConfig 应用配置文件
