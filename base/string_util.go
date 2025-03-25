@@ -1,6 +1,8 @@
 package base
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"strings"
 	"unicode"
 )
@@ -19,4 +21,13 @@ func CamelToSnake(str string) string {
 		}
 	}
 	return result.String()
+}
+
+// RandString 生成指定长度的随机字符串
+func RandString(length int) (string, error) {
+	b := make([]byte, length)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return base64.URLEncoding.EncodeToString(b)[:length], nil
 }
