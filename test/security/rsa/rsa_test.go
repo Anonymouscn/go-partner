@@ -52,3 +52,10 @@ func TestRSAWorkflow(t *testing.T) {
 	}
 	fmt.Printf("verify result: %v\n", verify)
 }
+
+func TestRSASign(t *testing.T) {
+	privateKey := "$privateKey"
+	plaintext := "$plaintext"
+	signText, _ := rsa.SignWithBase64(plaintext, privateKey)
+	fmt.Println(signText)
+}
