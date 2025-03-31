@@ -6,8 +6,8 @@ import (
 
 // Period 时间段
 type Period struct {
-	StartTime *time.Time
-	EndTime   *time.Time
+	StartTime time.Time
+	EndTime   time.Time
 }
 
 // Calender 日历
@@ -47,8 +47,8 @@ func (c *Calender) calculateToday() {
 	todayStart := time.Date(c.year, c.month, c.day, 0, 0, 0, 0, time.Local)
 	todayEnd := time.Date(c.year, c.month, c.day, 23, 59, 59, 999999999, time.Local)
 	c.todayPeriod = &Period{
-		StartTime: &todayStart,
-		EndTime:   &todayEnd,
+		StartTime: todayStart,
+		EndTime:   todayEnd,
 	}
 }
 
@@ -75,8 +75,8 @@ func (c *Calender) DaysAgo(n int) *Period {
 	dayStart := todayPeriod.StartTime.AddDate(0, 0, -n)
 	dayEnd := todayPeriod.EndTime.AddDate(0, 0, -n)
 	return &Period{
-		StartTime: &dayStart,
-		EndTime:   &dayEnd,
+		StartTime: dayStart,
+		EndTime:   dayEnd,
 	}
 }
 
@@ -87,8 +87,8 @@ func (c *Calender) DaysAfter(n int) *Period {
 	dayStart := todayPeriod.StartTime.AddDate(0, 0, n)
 	dayEnd := todayPeriod.EndTime.AddDate(0, 0, n)
 	return &Period{
-		StartTime: &dayStart,
-		EndTime:   &dayEnd,
+		StartTime: dayStart,
+		EndTime:   dayEnd,
 	}
 }
 
@@ -110,8 +110,8 @@ func (c *Calender) calculateThisWeek() {
 	thisWeekEnd := thisWeekStart.AddDate(0, 0, 6).
 		Add(23*time.Hour + 59*time.Minute + 59*time.Second + 999999999*time.Nanosecond)
 	c.thisWeekPeriod = &Period{
-		StartTime: &thisWeekStart,
-		EndTime:   &thisWeekEnd,
+		StartTime: thisWeekStart,
+		EndTime:   thisWeekEnd,
 	}
 }
 
@@ -138,8 +138,8 @@ func (c *Calender) WeeksAgo(n int) *Period {
 	lastWeekStart := thisWeekPeriod.StartTime.AddDate(0, 0, -7*n)
 	lastWeekEnd := thisWeekPeriod.StartTime.AddDate(0, 0, -7*(n-1)).Add(-1)
 	return &Period{
-		StartTime: &lastWeekStart,
-		EndTime:   &lastWeekEnd,
+		StartTime: lastWeekStart,
+		EndTime:   lastWeekEnd,
 	}
 }
 
@@ -150,8 +150,8 @@ func (c *Calender) WeeksAfter(n int) *Period {
 	nextWeekStart := thisWeekPeriod.StartTime.AddDate(0, 0, 7*n)
 	nextWeekEnd := thisWeekPeriod.StartTime.AddDate(0, 0, 7*(n+1)).Add(-1)
 	return &Period{
-		StartTime: &nextWeekStart,
-		EndTime:   &nextWeekEnd,
+		StartTime: nextWeekStart,
+		EndTime:   nextWeekEnd,
 	}
 }
 
@@ -168,8 +168,8 @@ func (c *Calender) calculateThisMonth() {
 	thisMonthEnd := time.Date(nextMonthYear, nextMonth, 1, 0, 0, 0, 0, time.Local).
 		Add(-1)
 	c.thisMonthPeriod = &Period{
-		StartTime: &thisMonthStart,
-		EndTime:   &thisMonthEnd,
+		StartTime: thisMonthStart,
+		EndTime:   thisMonthEnd,
 	}
 }
 
@@ -196,8 +196,8 @@ func (c *Calender) MonthsAgo(n int) *Period {
 	monthStart := thisMonthPeriod.StartTime.AddDate(0, -n, 0)
 	monthEnd := thisMonthPeriod.StartTime.AddDate(0, -(n - 1), 0).Add(-1)
 	return &Period{
-		StartTime: &monthStart,
-		EndTime:   &monthEnd,
+		StartTime: monthStart,
+		EndTime:   monthEnd,
 	}
 }
 
@@ -208,8 +208,8 @@ func (c *Calender) MonthsAfter(n int) *Period {
 	monthStart := thisMonthPeriod.StartTime.AddDate(0, n, 0)
 	monthEnd := thisMonthPeriod.StartTime.AddDate(0, n+1, 0).Add(-1)
 	return &Period{
-		StartTime: &monthStart,
-		EndTime:   &monthEnd,
+		StartTime: monthStart,
+		EndTime:   monthEnd,
 	}
 }
 
@@ -218,8 +218,8 @@ func (c *Calender) calculateThisYear() {
 	thisYearStart := time.Date(c.year, 1, 1, 0, 0, 0, 0, time.Local)
 	thisYearEnd := time.Date(c.year, 12, 31, 23, 59, 59, 999999999, time.Local)
 	c.thisYearPeriod = &Period{
-		StartTime: &thisYearStart,
-		EndTime:   &thisYearEnd,
+		StartTime: thisYearStart,
+		EndTime:   thisYearEnd,
 	}
 }
 
@@ -246,8 +246,8 @@ func (c *Calender) YearsAgo(n int) *Period {
 	yearStart := thisYearPeriod.StartTime.AddDate(-n, 0, 0)
 	yearEnd := thisYearPeriod.StartTime.AddDate(-(n - 1), 0, 0).Add(-1)
 	return &Period{
-		StartTime: &yearStart,
-		EndTime:   &yearEnd,
+		StartTime: yearStart,
+		EndTime:   yearEnd,
 	}
 }
 
@@ -258,7 +258,7 @@ func (c *Calender) YearsAfter(n int) *Period {
 	yearStart := thisYearPeriod.StartTime.AddDate(n, 0, 0)
 	yearEnd := thisYearPeriod.StartTime.AddDate(n+1, 0, 0).Add(-1)
 	return &Period{
-		StartTime: &yearStart,
-		EndTime:   &yearEnd,
+		StartTime: yearStart,
+		EndTime:   yearEnd,
 	}
 }
