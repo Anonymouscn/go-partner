@@ -87,3 +87,8 @@ func (generator *SnowIDGenerator) Generate() int64 {
 	result, _ := base.BinaryStringToInt64(payload, SnowIDBits)
 	return result
 }
+
+// AddTimeOffset 增加时间偏移量 (对付时间偏移情况)
+func (generator *SnowIDGenerator) AddTimeOffset() {
+	generator.Offset++
+}
