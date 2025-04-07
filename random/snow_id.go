@@ -71,7 +71,7 @@ func (generator *SnowIDGenerator) Generate() int64 {
 	sign := int64(SnowIDSign)
 	sis, _ := base.NumberToBinaryString(sign, SnowIDSignBits)
 	// 时间戳
-	timestamp := time.Now().UnixMicro()
+	timestamp := time.Now().UnixMilli()
 	bs, _ := base.NumberToBinaryString(timestamp, SnowIDTimestampBits)
 	// 机器 id
 	machineID := int64(generator.MachineID)
