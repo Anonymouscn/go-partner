@@ -1,10 +1,11 @@
 package lock
 
 import (
-	"github.com/Anonymouscn/go-partner/async"
 	"runtime"
 	"sync/atomic"
 	"time"
+
+	"github.com/Anonymouscn/go-partner/async"
 )
 
 const (

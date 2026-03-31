@@ -6,11 +6,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"github.com/Anonymouscn/go-partner/base"
-	customerror "github.com/Anonymouscn/go-partner/error"
-	iotools "github.com/Anonymouscn/go-partner/io"
-	"github.com/Anonymouscn/go-partner/net"
-	"github.com/bytedance/sonic"
 	"io"
 	net2 "net"
 	"net/http"
@@ -20,6 +15,12 @@ import (
 	"strings"
 	"time"
 	"unsafe"
+
+	"github.com/Anonymouscn/go-partner/base"
+	customerror "github.com/Anonymouscn/go-partner/error"
+	iotools "github.com/Anonymouscn/go-partner/io"
+	"github.com/Anonymouscn/go-partner/net"
+	"github.com/bytedance/sonic"
 )
 
 // RestClient Restful 客户端

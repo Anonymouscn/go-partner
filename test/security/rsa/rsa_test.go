@@ -2,8 +2,10 @@ package rsa
 
 import (
 	"fmt"
-	"github.com/Anonymouscn/go-partner/security/rsa"
+	"os"
 	"testing"
+
+	"github.com/Anonymouscn/go-partner/security/rsa"
 )
 
 func TestRSAWorkflow(t *testing.T) {
@@ -16,7 +18,13 @@ func TestRSAWorkflow(t *testing.T) {
 
 	// ================================================ 加密/解密测试 ================================================ //
 
-	plainText := "This is a test plain text"
+	//plainText := "This is a test plain text"
+	plain, err := os.ReadFile("/path/to/file")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	plainText := string(plain)
 	fmt.Printf("Set a plain text: %v\n", plainText)
 	cipherText, err := rsa.EncryptWithBase64(plainText, publicKey)
 	if err != nil {
